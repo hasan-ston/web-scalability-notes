@@ -1,177 +1,152 @@
 # Chapter 2 — Managing Complexity and System Design
 
-## 1. The Idea of Local Simplicity
-As systems grow, they can’t stay completely simple — so we aim for **local simplicity** instead.
+## Local Simplicity
 
-Local simplicity means:
-- When you open a *class*, you can quickly understand what it does.
-- When you look at a *module* (a collection of classes), you can ignore the individual methods and see the bigger picture:  
-  “These classes work together to accomplish X.”
+As systems grow, maintaining overall simplicity becomes impractical. The focus shifts to **local simplicity** - ensuring individual components remain understandable in isolation.
 
-You can imagine the system as a **graph**, where:
-- Classes = nodes  
-- Dependencies between them = edges  
+Key principles:
+- When examining a class, its purpose and behavior should be quickly apparent
+- When reviewing a module (collection of classes), the individual method implementations can be abstracted away to understand the module's overall purpose
 
-Complexity isn’t about how many classes you have — it’s about how many connections exist between them.  
-A class depending on five other classes is far harder to maintain than one depending on just one or two.
+Systems can be visualized as graphs where classes are nodes and dependencies are edges. Complexity stems not from the number of classes, but from the density of dependencies between them. A class depending on five others is significantly harder to maintain than one with one or two dependencies.
 
-> **Lesson:** Simplicity is the most fundamental design value. Without it, engineers can’t understand the code, and if they can’t understand it, they can’t safely extend or maintain it. Growth dies when comprehension dies.
+## Loose Coupling
 
----
+It means minimizing the knowledge each component has about others.
 
-## 2. Loose Coupling
-**Loose coupling** means each component knows as little as possible about the others.
+Benefits:
+- Changes to one component have minimal impact on others
+- Components can be replaced or upgraded independently
+- Parallel development is facilitated as teams don't need complete system knowledge
+- Debugging becomes more tractable when concerns are separated
 
-### Why It Matters
-- Changing one component shouldn’t break everything else.  
-- When components are independent, you can replace or upgrade one without rewriting the whole system.  
-- It also makes debugging and scaling teams easier since no one needs to understand *everything* to work on *something*.
+Structural hierarchy reminder:
+- Applications → Modules → Classes
+- Classes represent the fundamental unit of abstraction
 
-**Structure reminder:**
-- You have **applications** → made of **modules** → made of **classes**.  
-- **Classes** are the smallest unit of abstraction.
+## Common Productivity Issues
 
----
+### DRY Principle (Don't Repeat Yourself)
+Code duplication creates maintenance burden. When logic is duplicated across multiple locations, bug fixes and updates must be applied consistently everywhere. This increases both development time and the chances of introducing inconsistencies.
 
-## 3. Common Productivity Killers
+### Manual Processes
+Manual deployment, testing, and environment configuration may seem manageable initially but scales poorly. These tasks compound over time, eventually consuming more resources than feature development. Early automation investment pays off significantly.
 
-### DRY (Don’t Repeat Yourself)
-Copy/paste programming breaks this rule.  
-If you duplicate code across apps, every bug must be fixed in multiple places. That wastes time and invites errors.
+## Contracts in Object-Oriented Programming
 
-### Lack of Automation
-Manually deploying, testing, building, or configuring development environments might seem harmless early on, but it snowballs.  
-Eventually, most of your day is spent doing repetitive setup instead of writing actual code.  
-**Automate early.**
+A contract defines the interface between system components, establishing clear expectations for interaction.
 
----
+**Method contract:** The method signature specifies expected parameters and return values
+**Class contract:** The public interface exposes available behaviors and operations
 
-## 4. Contracts in OOP
-In programming, a **contract** defines the rules of interaction between parts of your system.
+Contracts establish boundaries that allow components to interact predictably without exposing internal implementation details.
 
-- For **methods**, the contract = the method signature (what parameters it expects and what it returns).  
-- For **classes**, the contract = its public interface (what behaviors it exposes).
+## Open/Closed Principle
 
-Contracts help maintain boundaries between parts of your code — each piece promises to behave a certain way, without revealing how.
+It states that classes should be open for extension but **closed for modification.
 
----
+This means new functionality should be addable without modifying existing, stable code. This approach reduces the risk of introducing bugs into working systems when requirements evolve.
 
-## 5. The Open/Closed Principle
-The **Open/Closed Principle** says:  
-> Classes should be *open for extension* but *closed for modification*.
+## Interfaces and Dependencies
 
-That means you should be able to add new functionality without rewriting old code.  
-This keeps existing, stable code from constantly being touched (and possibly broken) when requirements change.
+**Interfaces** define contracts (what operations are available).  
+**Concrete classes** provide implementations (how operations are performed).
 
----
+Dependency guidelines:
+- Interfaces should depend only on other interfaces, never on concrete implementations
+- Concrete classes should depend on interfaces wherever practical
 
-## 6. Interfaces and Dependencies
-**Interfaces** describe *what* something can do.  
-**Concrete classes** define *how* they do it.
+When interfaces reference concrete classes directly, it creates rigid dependencies that eliminate flexibility, which is why they should reference other interfaces.
 
-### Rules to Remember
-- Interfaces should only depend on other interfaces — never on specific implementations.  
-- Concrete classes should depend on interfaces whenever possible.  
+## Dependency Injection (DI)
 
-This keeps your code flexible and reduces how tightly components are bound together.  
-If an interface mentions a concrete class, it’s like hardcoding a dependency — that kills flexibility.
+**Dependency Injection** inverts the responsibility for creating dependencies. Instead of a class instantiating its own dependencies, they are provided externally.
 
----
-
-## 7. Dependency Injection & Inversion of Control (IoC)
-
-### Dependency Injection (DI)
-**Dependency Injection (DI)** is a technique to reduce coupling and encourage the open/closed principle.  
-Instead of a class *creating* what it needs, you *give* it what it needs from the outside.
-
+Without DI:
 ```java
-// Instead of this:
 class ReportService {
-    Database db = new Database();
+    Database db = new Database();  // Creates own dependency
 }
+```
 
-// Do this:
+With DI:
+```java
 class ReportService {
     Database db;
-    ReportService(Database db) {
+    ReportService(Database db) {  // Dependency injected
         this.db = db;
     }
 }
-Now `ReportService` doesn’t care *which* database it gets — just that it gets one.
+```
 
----
+This approach decouples `ReportService` from specific database implementations. It also allows mock dependencies to be injected, making testing easier.
 
-## 7. Inversion of Control (IoC)
+## Inversion of Control (IoC)
 
-**Dependency Injection (DI)** is part of a bigger idea called **Inversion of Control (IoC)**.
+Dependency Injection is one aspect of the broader **Inversion of Control** pattern.
 
-IoC means something external (like a framework) controls when your code runs.  
-Instead of your code calling the framework, the **framework calls you**.
+In traditional programming, application code calls libraries and frameworks. With IoC, this relationship inverts - the framework calls application code at appropriate times.
 
-### Example
-A web framework might call your `handleRequest()` method whenever a new request arrives.  
-You don’t decide when this happens — the framework does.  
-You just define what to do when it happens.
+Example: Web frameworks call application-defined request handlers when HTTP requests arrive. The framework controls execution flow; the application defines behavior.
 
-IoC doesn’t reduce *overall* system complexity, but it simplifies your local application code because the framework handles much of the control flow for you.
+IoC doesn't reduce overall system complexity, but it does simplify application level code by delegating control flow management to the framework.
 
----
+## Functional Partitioning
 
-## 8. Functional and Data Partitioning
+**Functional partitioning** organizes infrastructure by distinct roles or functions.
 
-### Functional Partitioning
-In infrastructure terms, **functional partitioning** means isolating server roles.
+Common functional partitions:
+- Web servers (HTTP request handling)
+- Cache servers (temporary data storage)
+- Message queue servers (asynchronous task distribution)
+- Worker servers (background job processing)
+- Database servers (persistent data storage)
+- Load balancers (traffic distribution)
 
-You divide your system into different server types:
-- Web servers  
-- Object cache servers  
-- Message queue servers  
-- Queue worker machines  
-- Data stores  
-- Load balancers  
+Each function operates independently, allowing targeted scaling and replacement without affecting other system components.
 
-Each role focuses on one job, allowing you to scale or replace that function independently.
+## Data Partitioning
 
----
+It distributes data across multiple servers rather than replicating complete datasets.
 
-### Data Partitioning
-**Data partitioning** means dividing your data across multiple servers instead of cloning everything.
+**Advantages:**
+- Enables horizontal scaling - capacity increases by adding partitions
+- Theoretically unlimited scalability
 
-#### Benefits
-- Enables massive (potentially endless) scalability — you can just add more partitions.
+**Challenges:**
+- Requires mechanism to locate data before querying (routing logic)
+- Cross-partition queries are complex and expensive
+- Rebalancing partitions during growth is non-trivial
 
-#### Challenges
-- You must be able to **find** which server has the data before querying.  
-- Queries that touch multiple partitions are much slower and more complex to manage.
+Data partitioning provides the best scalability characteristics but is also the most complex and expensive partitioning strategy to implement correctly.
 
-> So while data partitioning offers great scalability, it’s also the hardest and most expensive technique to get right.
-
----
-
-## 9. Reliability and Self-Healing
+## Reliability and Fault Tolerance
 
 ### Single Point of Failure (SPOF)
-A **single point of failure** is any part of your system that, if it fails, brings everything down.  
 
-Example:
-- A master database server with no replica.  
-If it dies, your entire app goes offline.
+It is any component whose failure causes complete system failure.
 
-**Goal:** design systems with *no single points of failure.*
+Example: A master database without replication. If it fails, the entire application becomes unavailable.
 
----
+Design goal: Eliminate single points of failure through redundancy and failover mechanisms. In practice, achieving zero SPOFs is challenging, but identifying and mitigating critical failure points significantly improves reliability.
 
 ### Self-Healing Systems
-The **holy grail** of web operations.  
-A self-healing system doesn’t just fail gracefully — it *detects problems and fixes them automatically*, without human intervention.
 
-#### Examples
-- Restarting crashed services automatically  
-- Rebalancing traffic when servers fail  
-- Repairing failed storage nodes in a cluster  
+They detect failures and automatically recover without manual intervention.
 
----
+Common self-healing mechanisms:
+- Automatic service restarts after crashes
+- Traffic rerouting around failed servers
+- Automatic storage node repair and rebalancing
 
-### Availability Formula
-To measure how available a system is:
+### Availability Calculation
 
+```
+Availability = MTBF / (MTBF + MTTR)
+```
+
+Where:
+- **MTBF** = Mean Time Between Failures
+- **MTTR** = Mean Time To Recovery
+
+Availability improves by either reducing failure frequency (higher MTBF) or decreasing recovery time (lower MTTR). Both approaches are valuable but address different aspects of system reliability.
