@@ -4,17 +4,15 @@
 
 ### Master-Slave Replication
 
-In MySQL replication, you synchronize the state of two servers - one **master** and one or more **slaves**.
+In MySQL replication, you synchronize the state of two servers - one master and one or more slaves.
 
-**Key characteristics:**
 - Data can only be read from slaves
 - All modifications happen through the master
 - Data-modifying commands are sent to the master
-- Master executes the commands and writes them to a **binlog file**
-- Master returns response to client
+- Master executes the commands and writes them to a binlog file and then returns the response to the client.
 - Slaves can connect to master anytime and request incremental updates from the binlog
 
-**Important:** MySQL replication is **asynchronous**, which decouples the master from slaves. The master doesn't wait for slaves to confirm they received the updates.
+MySQL replication is asynchronous, which decouples the master from slaves. So the master doesn't have to wait for slaves to confirm they've received the updates.
 
 ### Scaling Reads with Slaves
 
@@ -27,7 +25,7 @@ You can add multiple slave servers (clones) to increase read capacity. More copi
 
 ### Master-Master Replication
 
-An alternative topology where Master A replicates from Master B, and Master B replicates from Master A (circular replication).
+It's an alternate topology where Master A replicates from Master B, and Master B replicates from Master A.
 
 MySQL allows this because each statement written to the binlog includes the name of the server it originally came from, preventing infinite loops.
 
@@ -40,23 +38,20 @@ MySQL allows this because each statement written to the binlog includes the name
 6. Rebuild Master A
 7. Master A becomes hot standby
 
-### Replication Lag
-
-**Replication lag** measures how far behind a slave is from its master.
+**Replication Lag**: measures how far behind a slave is from its master.
 
 Lag can spike suddenly because statements are executed one at a time on slaves. If the master executes a heavy query or batch of updates, slaves must replay them sequentially, which can cause temporary lag.
 
 **Impact of data types:**
 - **Inactive data:** May increase database index size but doesn't put much pressure on the database since it's rarely accessed
-- **Active data:** Frequently accessed, so the database must either buffer it in memory or fetch from disk (where the bottleneck usually is)
+- **Active data:** Frequently accessed, so the database must either buffer it into memory or fetch from disk. <- Usually where the bottleneck is.
 
 ### Bypassing Replication for Schema Changes
 
-Sometimes you want to make changes on the master without replicating them to slaves (useful for heavy operations like ALTER TABLE).
+Sometimes you want to make changes on the master without replicating them to slaves (useful for heavy operations like ALTER TABLE). Prevents slave from lagging behind master.
 
 **Process:**
-1. Disable binlogging on the master for the operation
-2. Master applies the change locally but doesn't record it in replication log
+1. Disable binlogging on the master for the operation (telling the master to not record these changes). Changes are applied locally
 3. Slaves won't automatically receive the update
 4. Manually run the same change on each slave
 
@@ -64,13 +59,11 @@ This keeps all databases in sync while avoiding the heavy replication load from 
 
 **Important:** This is only safe for schema changes, not normal data writes, which should always replicate automatically.
 
----
-
 ## Data Partitioning (Sharding)
 
 ### What is Sharding?
 
-**Sharding** involves dividing your dataset into smaller buckets and assigning each bucket to a single server. Servers become independent from one another.
+It involves dividing your dataset into smaller buckets and assigning each bucket to a single server. Servers become independent from one another.
 
 The critical requirement is the **sharding key** - a way to locate which shard holds the data without having to ask all servers.
 
@@ -82,17 +75,17 @@ The critical requirement is the **sharding key** - a way to locate which shard h
 
 ### ACID and Distributed Transactions
 
-**ACID** refers to transaction properties supported by most relational databases:
+It refers to transaction properties supported by most relational databases:
 - **A**tomicity: all or nothing
 - **C**onsistency: data integrity rules maintained
 - **I**solation: transactions don't interfere with each other
 - **D**urability: committed data persists
 
-Maintaining ACID properties across shards requires **distributed transactions**, which are complex and expensive to execute.
+Maintaining ACID properties across shards requires distributed transactions, which are complex and expensive to execute.
 
 ### Sharding Key Mapping
 
-**Simple approach: Modulo operator**
+Simple approach: Modulo operator
 
 `Modulo(n, x)` gives the remainder of dividing x by n.
 
@@ -102,7 +95,7 @@ Example: If you have 4 shards, user ID 123 goes to shard `123 % 4 = 3`
 
 **Better approach: Mapping table**
 
-Keep all shard mappings in a separate database that acts as the source of truth.
+Keep all shard mappings in a separate database that acts as the source.
 
 Can deploy a MySQL master server for the mapping table and replicate that data to all shards. This way, adding shards only requires updating the mapping table, not rehashing everything.
 
@@ -128,13 +121,9 @@ This adds complexity to queries that would be simple in a single database.
 
 **Tools like Azure SQL Database Elastic Scale** can help manage some of this complexity.
 
----
-
 ## Data Normalization
 
-**Data normalization** is a process of structuring data by breaking it into separate tables.
-
-**Key aspects:**
+It is a process of structuring data by breaking it into separate tables:
 - Break data down into separate fields
 - Each row identified by a primary key
 - Rows in different tables reference each other rather than duplicating information
@@ -144,15 +133,9 @@ This adds complexity to queries that would be simple in a single database.
 - Better indexing and searching
 - Increases data integrity
 
----
+## NoSQL 
 
-## NoSQL Overview
-
-**NoSQL** is a broad term for data stores that diverge from traditional relational database models. They usually don't support SQL language.
-
-Different NoSQL databases make different tradeoffs to achieve better scalability for specific use cases.
-
----
+It is a broad term for data stores that diverge from traditional relational database models. They usually don't support SQL language. Hence the name, NoSQL.
 
 ## CAP Theorem
 
@@ -161,7 +144,7 @@ Different NoSQL databases make different tradeoffs to achieve better scalability
 ### Consistency
 Any node can see the same data at the same time. All state changes must be serializable (happening one after another, not in parallel). This requires coordination across CPUs and servers to ensure latest data is returned.
 
-**Note:** This differs from ACID consistency, which focuses on data integrity rules like foreign keys and uniqueness.
+Note: This differs from ACID consistency, which focuses on data integrity rules like foreign keys and uniqueness.
 
 ### Availability
 Any available node can serve client requests even when other nodes fail.
@@ -169,15 +152,11 @@ Any available node can serve client requests even when other nodes fail.
 ### Partition Tolerance
 System can operate even during network failures when communication between nodes is impossible.
 
-**The tradeoff:** You can only guarantee two of the three. Most distributed systems must tolerate partitions (network failures happen), so you choose between consistency and availability.
-
----
-
 ## Eventual Consistency
 
-**Eventual consistency** is a property where different nodes may have different versions of the data, but state changes eventually propagate to all servers.
+It is a property where different nodes may have different versions of the data, but state changes eventually propagate to all servers.
 
-If you query a single server, you can't tell whether you got the latest data or an older version because the server you chose might be lagging behind.
+If you query a single server, you can't tell whether you got the latest data or an older version (stale data) because the server you chose might be lagging behind.
 
 ### Amazon's Shopping Cart Example
 
@@ -188,9 +167,7 @@ Amazon sacrificed consistency for high availability. Even if some servers were d
 2. When multiple versions are discovered, they're merged by adding all items from all carts
 3. Users never lose items added to cart, making it easier to complete purchases
 
-This is **client-side conflict resolution** - the application handles merging conflicting versions.
-
----
+This is called client-side conflict resolution - the application handles merging conflicting versions.
 
 ## Quorum Consistency
 
@@ -203,8 +180,6 @@ This provides stronger consistency than eventual consistency while still allowin
 
 Some systems like Cassandra let you tune consistency level per operation. MongoDB (a CP system) can enforce secondary node consistency on writes, though this isn't always the default.
 
----
-
 ## Cassandra
 
 ### Topology and Failover
@@ -216,12 +191,10 @@ Cassandra's architecture makes replacing failed nodes straightforward. Unlike My
 
 ### Write Performance
 
-Cassandra uses **append-only data structures**, allowing extremely efficient writes:
+Cassandra uses append-only data structures, allowing extremely efficient writes:
 - Data is never overwritten in place
 - Hard disks never perform random writes
 - Greatly increases write throughput
-
-### Tradeoff: Deletes and Updates
 
 Because Cassandra is eventually consistent and uses append-only storage, deletes and updates are internally persisted as inserts.
 
@@ -230,11 +203,7 @@ Because Cassandra is eventually consistent and uses append-only storage, deletes
 - More disk space used temporarily
 - More data to scan during reads
 
----
-
 ## Summary
-
-Scaling the data layer is usually the most challenging area of a web application. 
 
 You can achieve horizontal scalability by:
 1. Carefully designing your application
@@ -243,5 +212,3 @@ You can achieve horizontal scalability by:
    - **Functional partitioning** (separate databases for separate functions)
    - **Replication** (multiple copies for read scaling and availability)
    - **Sharding** (splitting data across independent servers)
-
-Each technique has tradeoffs in complexity, consistency, and operational overhead.
